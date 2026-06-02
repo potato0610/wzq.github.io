@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<!-- 手机适配关键标签，苹果专用 -->
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<title>3D五子棋</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+body{
+    background:#ffffff;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:12px 6px;
+    font-family:system-ui,-apple-system,sans-serif;
+}
+#info{font-size:18px;margin-bottom:10px;height:24px;color:#222;}
+#wrap{position:relative;}
+/* 自适应棋盘，手机自动缩小 */
+.chess{
+    width:min(92vw,540px);
+    aspect-ratio:1/1;
+    background:#fff;
+    background-image:linear-gradient(#666 1px,transparent 1px),linear-gradient(90deg,#666 1px,transparent 1px);
+    background-size:calc(100%/15) calc(100%/15);
+    border:1px solid #999;
+}
+.dot{
+    width:calc(100%/15);
+    height:calc(100%/15);
+    position:absolute;
+    transform:translate(-50%,-50%);
+    display:flex;align-items:center;justify-content:center;
+    left:calc(var(--x) * 100% / 15);
+    top:calc(var(--y) * 100% / 15);
+}
+/*3D立体棋子，苹果Safari阴影兼容*/
+.black,.white{
+    width:78%;height:78%;border-radius:50%;
+    box-shadow:inset -4px -4px 8px rgba(0,0,0,0.35),inset 3px 3px 6px rgba(255,255,255,0.2),0 3px 5px #aaa;
+    -webkit-box-shadow:inset -4px -4px 8px rgba(0,0,0,0.35),inset 3px 3px 6px rgba(255,255,0.2),0 3px 5px #aaa;
+}
+.black{background:radial-gradient(circle at 30% 30%,#444,#000)}
+.white{background:radial-gradient(circle at 30% 30%,#fff,#ddd)}
+#btn-box{margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;}
+button{
+    padding:9px 20px;font-size:15px;cursor:pointer;
+    border:1px solid #888;background:#fff;border-radius:6px;
+}
+</style>
+</head>
+<body>
+<div id="info">黑方先行</div>
+<div id="wrap"><div class="chess" id="board"></div></div>
+<div id="btn-box">
+<button onclick="restart()">重新开局</button>
+<button onclick="undo()">悔棋一步</button>
+</div>
+
+<script>
+const size = 15;
+let map = Array.from({length:size},()=>Array(size).fill(0));
+let turn = 1, record = [];
+const board = document.getElementById('board');
+
+//生成棋盘点位（CSS变量自适应尺寸）
+for(let y=0;y<size;y++){
+    for(let x=0;x<size;x++){
+        let div = document.createElement('div');
+        div.className='dot';
+        div.style.setProperty('--x',x);
+        div.style.setProperty('--y',y);
+        div.dataset.x=x;div.dataset.y=y;
+        div.onclick=()=>put(x,y,div);
+        board.appendChild(div);
+    }
+}
+
+//落子逻辑
+function put(x,y,dom){
+    if(map[y][x])return;
+    map[y][x]=turn;
+    record.push({x,y,t:turn,dom});
+    let c = document.createElement('div');
+    c.className = turn===1?'black':'white';
+    dom.appendChild(c);
+    if(checkWin(x,y,turn)){
+        document.getElementById('info').innerText = turn===1?'黑棋获胜！':'白棋获胜！';
+        board.style.pointerEvents='none';
+        return;
+    }
+    turn = turn===1?2:1;
+    document.getElementById('info').innerText = turn===1?'黑方回合':'白方回合';
+    board.style.pointerEvents='auto';
+}
+
+//胜负判定
+function checkWin(x,y,p){
+    let dir=[[1,0],[0,1],[1,1],[1,-1]];
+    for(let [dx,dy] of dir){
+        let cnt=1;
+        for(let i=1;i<5;i++){
+            let nx=x+dx*i,ny=y+dy*i;
+            if(nx<0||ny<0||nx>=size||ny>=size||map[ny][nx]!==p)break;
+            cnt++;
+        }
+        for(let i=1;i<5;i++){
+            let nx=x-dx*i,ny=y-dy*i;
+            if(nx<0||ny<0||nx>=size||ny>=size||map[ny][nx]!==p)break;
+            cnt++;
+        }
+        if(cnt>=5)return true;
+    }
+    return false;
+}
+
+//重置棋局
+function restart(){
+    map = Array.from({length:size},()=>Array(size).fill(0));
+    turn=1;record=[];
+    document.querySelectorAll('.black,.white').forEach(e=>e.remove());
+    document.getElementById('info').innerText='黑方先行';
+    board.style.pointerEvents='auto';
+}
+
+//悔棋
+function undo(){
+    if(!record.length)return;
+    let last = record.pop();
+    map[last.y][last.x]=0;
+    last.dom.querySelector('div').remove();
+    turn = last.t;
+    document.getElementById('info').innerText = turn===1?'黑方回合':'白方回合';
+    board.style.pointerEvents='auto';
+}
+</script>
+</body>
+</html>
